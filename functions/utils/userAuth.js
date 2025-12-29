@@ -85,3 +85,38 @@ function getCookieValue(cookies, name) {
     const match = cookies.match(new RegExp('(^| )' + name + '=([^;]+)'));
     return match ? decodeURIComponent(match[2]) : null;
 }
+
+
+/**
+ * 从请求中解析用户 Session（普通用户登录态）
+ * 只识别，不做权限判断
+ * 返回 null 或 { userId }
+ */
+export async function getUserSessionFromRequest(request, env) {
+  // 1️⃣ 从 Authorization Header 取 Bearer Token
+  const authHeader = request.headers.get("Authorization");
+  if (!authHeader) return null;
+
+  const match = authHeader.match(/^Bearer\s+(.+)$/);
+  if (!match) return null;
+
+  const token = match[1];
+
+  // 2️⃣ 查询 user_sessions 表
+  const row = await env.DB
+    .prepare(`
+      SELECT user_id
+      FROM user_sessions
+      WHERE token = ?
+        AND (expires_at IS NULL OR expires_at > datetime('now'))
+    `)
+    .bind(token)
+    .first();
+
+  if (!row) return null;
+
+  // 3️⃣ 返回“最小用户对象”
+  return {
+    userId: row.user_id,
+  };
+}
