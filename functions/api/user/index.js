@@ -28,7 +28,7 @@ export async function onRequestPost(context) {
       return json({ error: "用户已存在" }, 409);
     }
 
-    const passwordHash = hashPassword(password);
+    const passwordHash = await hashPassword(password);
 
     const result = await env.DB
       .prepare(
@@ -61,7 +61,8 @@ export async function onRequestPost(context) {
       .bind(username)
       .first();
 
-    if (!user || hashPassword(password) !== user.password_hash) {
+    
+    if (!user || await hashPassword(password) !== user.password_hash) {
       return json({ error: "用户名或密码错误" }, 401);
     }
 
