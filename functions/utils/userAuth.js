@@ -1,3 +1,4 @@
+
 import { fetchSecurityConfig } from './sysConfig';
 import { validateApiToken } from './tokenValidator';
 import { getDatabase } from './databaseAdapter.js';
@@ -87,36 +88,28 @@ function getCookieValue(cookies, name) {
 }
 
 
-/**
- * 从请求中解析用户 Session（普通用户登录态）
- * 只识别，不做权限判断
- * 返回 null 或 { userId }
- */
-export async function getUserSessionFromRequest(request, env) {
-  // 1️⃣ 从 Authorization Header 取 Bearer Token
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader) return null;
-
-  const match = authHeader.match(/^Bearer\s+(.+)$/);
+//******************************888
+//kenwa-GPT 2025-12-31
+export async function getUserFromRequest(request, env) {
+  const cookie = request.headers.get("Cookie") || "";
+  const match = cookie.match(/session=([^;]+)/);
   if (!match) return null;
 
-  const token = match[1];
+  const sessionId = match[1];
 
-  // 2️⃣ 查询 user_sessions 表
-  const row = await env.DB
+  const session = await env.DB
     .prepare(`
-      SELECT user_id
-      FROM user_sessions
-      WHERE token = ?
-        AND (expires_at IS NULL OR expires_at > datetime('now'))
+      SELECT u.id, u.username
+      FROM user_sessions s
+      JOIN users u ON s.user_id = u.id
+      WHERE s.id = ? AND s.expires_at > ?
     `)
-    .bind(token)
+    .bind(sessionId, Date.now())
     .first();
 
-  if (!row) return null;
-
-  // 3️⃣ 返回“最小用户对象”
-  return {
-    userId: row.user_id,
-  };
+  return session || null;
 }
+
+
+
+
