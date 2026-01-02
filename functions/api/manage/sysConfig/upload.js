@@ -1,8 +1,5 @@
 import { getDatabase } from '../../../utils/databaseAdapter.js';
 
-//kenwa-gpt 2025-12-31*******************************
-import { getUserFromRequest } from "../../../utils/userAuth.js";
-
 export async function onRequest(context) {
     // 上传设置相关，GET方法读取设置，POST方法保存设置
     const {
@@ -16,16 +13,6 @@ export async function onRequest(context) {
 
     const db = getDatabase(env);
 
-    //KENWA-GPT 2025-12-31
-    //在处理上传前获取用户=======================begin
-    const user = await getUserFromRequest(request, env);
-    
-    if (!user) {
-      return new Response("Not logged in", { status: 401 });
-    }
-    //===========================================end
-
-    
     // GET读取设置
     if (request.method === 'GET') {
         const settings = await getUploadConfig(db, env)
