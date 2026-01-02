@@ -14,6 +14,19 @@ import { getDatabase } from '../utils/databaseAdapter.js';
 export async function onRequest(context) {  // Contents of context object
     const { request, env, params, waitUntil, next, data } = context;
 
+
+    // 👇 2026-1-2 kenwa新增：获取当前用户
+    const user = await getUserFromRequest(request, env);
+    // 如果你希望【必须登录才能上传】
+    if (!user) {
+        return new Response("Not logged in", { status: 401 });
+    }
+
+    // 👇 挂到 context，供后面使用
+    context.user = user;
+    // 新增end=======================================
+
+    
     // 解析请求的URL，存入 context
     const url = new URL(request.url);
     context.url = url;
@@ -212,6 +225,11 @@ async function uploadFileToCloudflareR2(context, fullId, metadata, returnLink) {
     const { env, waitUntil, uploadConfig, formdata } = context;
     const db = getDatabase(env);
 
+    //2026-1-2 kenwa新增：
+    const user = context.user || null;
+    //新增END=============================
+
+    
     // 检查R2数据库是否配置
     if (typeof env.img_r2 == "undefined" || env.img_r2 == null || env.img_r2 == "") {
         return createResponse('Error: Please configure R2 database', { status: 500 });
@@ -234,6 +252,14 @@ async function uploadFileToCloudflareR2(context, fullId, metadata, returnLink) {
     metadata.Channel = "CloudflareR2";
     metadata.ChannelName = "R2_env";
 
+    //2026-1-2 kenwa新增
+    if (user) {
+        metadata.user_id = user.id;
+        metadata.username = user.username; // 可选，方便后台展示
+    }
+    // 新增end=======================================
+
+    
     // 图像审查，采用R2的publicUrl
     const R2PublicUrl = r2Channel.publicUrl;
     let moderateUrl = `${R2PublicUrl}/${fullId}`;
@@ -268,7 +294,7 @@ async function uploadFileToCloudflareR2(context, fullId, metadata, returnLink) {
 async function uploadFileToS3(context, fullId, metadata, returnLink) {
     const { env, waitUntil, uploadConfig, securityConfig, url, formdata } = context;
     const db = getDatabase(env);
-
+    
     const uploadModerate = securityConfig.upload.moderate;
 
     const s3Settings = uploadConfig.s3;
