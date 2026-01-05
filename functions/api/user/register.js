@@ -3,19 +3,19 @@ export async function onRequest({ request, env }) {
     return new Response("Method Not Allowed", { status: 405 });
   }
 
-  const { username, password } = await request.json();
+  const { email, password } = await request.json();
 
-  if (!username || !password) {
+  if (!email || !password) {
     return new Response("Missing params", { status: 400 });
   }
 
   const exists = await env.DB
-    .prepare("SELECT id FROM users WHERE username = ?")
-    .bind(username)
+    .prepare("SELECT id FROM users WHERE email = ?")
+    .bind(email)
     .first();
 
   if (exists) {
-    return new Response("User exists", { status: 409 });
+    return new Response("email exists", { status: 409 });
   }
 
   const hashBuffer = await crypto.subtle.digest(
@@ -27,8 +27,8 @@ export async function onRequest({ request, env }) {
     .join("");
 
   await env.DB
-    .prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)")
-    .bind(username, password_hash)
+    .prepare("INSERT INTO users (email, password_hash) VALUES (?, ?)")
+    .bind(email, password_hash)
     .run();
 
   return new Response(JSON.stringify({ ok: true }), {
