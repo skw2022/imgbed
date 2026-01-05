@@ -1,60 +1,138 @@
-<!doctype html>
-<html lang="">
+<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-
-  <link rel="icon" href="/logo.png">
-  <link rel="apple-touch-icon" href="/logo.png">
-  <link rel="mask-icon" href="/logo.png" color="#f4b400">
-
-  <meta name="description" content="Sanyue ImgHub - A modern file hosting platform">
-  <meta name="keywords" content="Sanyue, ImgHub, file hosting, image hosting, cloud storage">
-  <meta name="author" content="SanyueQi">
-
-  <title>Sanyue ImgHub</title>
-
-  <link href="/css/chunk-vendors.78806b00.css" rel="stylesheet">
-  <link href="/css/app.56292e98.css" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <title>ImgBed</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    input { margin: 5px 0; }
+    button { margin: 5px 0; }
+  </style>
 </head>
-
 <body>
-<noscript>
-  <strong>We're sorry but sanyue_imghub doesn't work properly without JavaScript enabled.</strong>
-</noscript>
 
-<!-- SPA 挂载点 -->
-<div id="app"></div>
+<div id="app">Loading...</div>
 
 <script>
-(async function () {
-  try {
-    const res = await fetch("/api/user?action=me", {
-      credentials: "include"
-    });
+/* ================= 公共工具 ================= */
 
-    if (!res.ok) throw new Error("Not logged in");
+async function api(url, options = {}) {
+  const res = await fetch(url, {
+    credentials: 'include',
+    ...options
+  });
+  return res;
+}
 
-    const user = await res.json();
+/* ================= 页面启动 ================= */
 
-    // 全局暴露用户信息，供 SPA 使用
-    window.__IMGBED_USER__ = user;
+async function boot() {
+  const res = await api('/api/user/me');
 
-    // 登录成功，加载真正的 SPA
-    loadApp();
-
-  } catch (e) {
-    // 未登录：加载“登录版 SPA”或跳转
-    window.location.href = "/login.html";
+  if (!res.ok) {
+    renderLogin();
+    return;
   }
-})();
 
-function loadApp() {
-  const script = document.createElement("script");
-  script.src = "/js/app.87ae8c4b.js";
-  script.defer = true;
-  document.body.appendChild(script);
+  const user = await res.json();
+
+  if (user.role === 'admin') {
+    renderAdmin(user);
+  } else {
+    renderUpload(user);
+  }
+}
+
+boot();
+
+/* ================= 登录 / 注册 ================= */
+
+function renderLogin() {
+  document.getElementById('app').innerHTML = `
+    <h2>登录</h2>
+    <input id="email" placeholder="邮箱"><br>
+    <input id="password" type="password" placeholder="密码"><br>
+    <button onclick="login()">登录</button>
+
+    <hr>
+
+    <h3>注册</h3>
+    <input id="r_email" placeholder="邮箱"><br>
+    <input id="r_password" type="password" placeholder="密码"><br>
+    <button onclick="register()">注册</button>
+  `;
+}
+
+async function login() {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+
+  const res = await api('/api/user/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+
+  if (!res.ok) {
+    alert('登录失败');
+    return;
+  }
+
+  boot();
+}
+
+async function register() {
+  const email = document.getElementById('r_email').value;
+  const password = document.getElementById('r_password').value;
+
+  const res = await api('/api/user/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+
+  if (!res.ok) {
+    alert('注册失败');
+    return;
+  }
+
+  alert('注册成功，请登录');
+}
+
+/* ================= 普通用户 ================= */
+
+function renderUpload(user) {
+  document.getElementById('app').innerHTML = `
+    <h2>欢迎，${user.email}</h2>
+    <p>普通用户</p>
+
+    <button onclick="logout()">退出登录</button>
+
+    <hr>
+
+    <p>这里接入你原有的上传界面即可</p>
+  `;
+}
+
+/* ================= 管理员 ================= */
+
+function renderAdmin(user) {
+  document.getElementById('app').innerHTML = `
+    <h2>管理员：${user.email}</h2>
+
+    <button onclick="logout()">退出登录</button>
+
+    <hr>
+
+    <p>这里放管理后台内容</p>
+  `;
+}
+
+/* ================= 退出 ================= */
+
+async function logout() {
+  await api('/api/user/logout', { method: 'POST' });
+  renderLogin();
 }
 </script>
 
