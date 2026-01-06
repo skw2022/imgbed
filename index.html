@@ -82,22 +82,30 @@ async function login() {
 }
 
 async function register() {
-  const email = document.getElementById('r_email').value;
+  const email = document.getElementById('r_email').value.trim();
   const password = document.getElementById('r_password').value;
 
-  const res = await api('/api/user/register', {
+  // 在这里打印出请求体，确保传递的数据格式正确
+  console.log("注册请求体：", { email, password });  // 你可以在浏览器控制台查看
+
+  const res = await fetch('/api/user/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({ email, password })
   });
 
+  const text = await res.text();
+  console.log("响应：", text);  // 打印出后端响应
+
   if (!res.ok) {
-    alert('注册失败');
+    alert('注册失败：' + text);
     return;
   }
 
   alert('注册成功，请登录');
 }
+
 
 /* ================= 普通用户 ================= */
 
